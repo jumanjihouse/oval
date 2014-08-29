@@ -66,14 +66,37 @@ Add this repo as a git submodule in a docker repo:
 Add the files to your Dockerfile and run a scan during `docker build`:
 
     FROM ...
-    ADD oval /oval
+
+    # Put things in your docker image.
     RUN ...
+    ADD ...
+
+    # Add deps for the oval scan.
+    ADD oval /oval
+    RUN yum -y install findutils openscap-utils; yum clean all
+
+    # Ensure system is fully patched.
+    RUN yum -y update; yum clean all
 
     # Do this after installing packages, etc.
-    # If the image is not patched according to latest feed,
-    # image fails to build (so you can remediate it).
     RUN /oval/remediate-oscap.sh
-    RUN /oval/oval-vulnerability-scan.sh
+
+    # If the image is not patched according to latest feed,
+    # complain loudly but finish the build.
+    # Example:
+    #   vulnerability scan exit status 2
+    #   ERROR: found 1 or more vulnerabilities (system is incompliant)
+    #   ---> 2d47b1fabf78
+    #   Removing intermediate container 580405f5932e
+    #   Successfully built 2d47b1fabf78
+    #
+    # If you want the build to fail if not patched, then
+    # simply remove the "|| :".
+    RUN /oval/oval-vulnerability-scan.sh || :
+
+For an actual example, see:
+
+* https://github.com/ISEexchange/puppetagent-rhel7-docker
 
 
 Contributing
